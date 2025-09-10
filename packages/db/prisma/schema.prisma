@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String       @id @default(cuid())
+  pubkey      String?      @unique
+  email       String       @unique
+  discordId   String?      @unique
+  displayName String
+  avatarUrl   String?
+  role        UserRole     @default(USER)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  password    String
+  hackthon    Hackathon[]
+  judge       Judge[]
+  lead        Team[]
+  teams       TeamMember[]
+}
+
+model Hackathon {
+  id               String         @id @default(cuid())
+  programPda       String         @unique
+  title            String
+  description      String
+  bannerUrl        String?
+  ipfsCid          String
+  organizerId      String
+  startTs          DateTime
+  submitDeadlineTs DateTime
+  voteDeadlineTs   DateTime
+  state            HackathonState
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  organizer        User           @relation(fields: [organizerId], references: [id])
+  judges           Judge[]
+  prizes           Prize[]
+  submissions      Submission[]
+  teams            Team[]
+}
+
+model Prize {
+  id          String    @id @default(cuid())
+  hackathonId String
+  rank        Int
+  amount      Decimal
+  mint        String?
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id])
+}
+
+model Team {
+  id          String       @id @default(cuid())
+  hackathonId String
+  teamLeadId  String
+  name        String
+  ipfsCid     String
+  createdAt   DateTime     @default(now())
+  submissions Submission[]
+  hackathon   Hackathon    @relation(fields: [hackathonId], references: [id])
+  teamLead    User         @relation(fields: [teamLeadId], references: [id])
+  members     TeamMember[]
+}
+
+model TeamMember {
+  id       String   @id @default(cuid())
+  teamId   String
+  userId   String
+  role     String   @default("MEMBER")
+  joinedAt DateTime @default(now())
+  team     Team     @relation(fields: [teamId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+}
+
+model Submission {
+  id          String    @id @default(cuid())
+  teamId      String
+  hackathonId String
+  title       String
+  shortDesc   String
+  ipfsCid     String
+  txSignature String?
+  submittedAt DateTime  @default(now())
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id])
+  team        Team      @relation(fields: [teamId], references: [id])
+  votes       Vote[]
+}
+
+model Judge {
+  id          String    @id @default(cuid())
+  hackathonId String
+  userId      String
+  pubkey      String
+  weight      Int       @default(1)
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+  votes       Vote?
+}
+
+model Vote {
+  id           String     @id @default(cuid())
+  submissionId String
+  judgeId      String     @unique
+  score        Int
+  txSignature  String?
+  createdAt    DateTime   @default(now())
+  judge        Judge      @relation(fields: [judgeId], references: [id])
+  submission   Submission @relation(fields: [submissionId], references: [id])
+
+  @@unique([submissionId, judgeId])
+}
+
+model EventLog {
+  id          String   @id @default(cuid())
+  programPda  String
+  type        String
+  data        Json
+  txSignature String
+  slot        Int
+  createdAt   DateTime @default(now())
+}
+
+enum Role {
+  ADMIN
+  ORGANIZER
+  JUDGE
+  PARTICIPANT
+}
+
+enum UserRole {
+  USER
+  JUDGE
+  ORGANIZER
+  ADMIN
+}
+
+enum HackathonState {
+  CREATED
+  REGISTRATION_OPEN
+  SUBMISSION_OPEN
+  VOTING_OPEN
+  FINALIZED
+}

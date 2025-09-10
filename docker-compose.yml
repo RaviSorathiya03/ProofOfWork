@@ -1,0 +1,18 @@
+# docker-compose.yml
+version: "3.8"
+services:
+  postgres:
+    image: postgres:15
+    container_name: solhack_postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: solhack
+      POSTGRES_PASSWORD: solhack
+      POSTGRES_DB: solhack_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
